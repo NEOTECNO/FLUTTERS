@@ -1,8 +1,3 @@
-// NOTE: This script requires the Ethers.js library to be loaded in the HTML file.
-// Please add the following line to the <head> or <body> of your HTML file:
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-//
-// This log will confirm if the file is being executed at all.
 console.log("main.js script is running.");
 
 try {
@@ -134,7 +129,7 @@ try {
                     imgContainer.classList.add('w-full', 'aspect-square', 'overflow-hidden');
                     
                     const img = document.createElement('img');
-                    img.classList.add('w-full', 'h-full', 'object-cover', 'blur-sm');
+                    img.classList.add('w-full', 'h-full', 'object-cover');
                     img.src = './images/example-placeholder.png';
                     img.alt = `NFT Placeholder #${index + 1}`;
 
