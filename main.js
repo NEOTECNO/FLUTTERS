@@ -118,7 +118,7 @@ try {
                     walletGrid.appendChild(card);
                 });
             } else if (walletAddress) {
-                walletGrid.innerHTML = '<p class="text-center text-gray-500 col-span-full">No NFTs found in your wallet.</p>';
+                walletGrid.innerHTML = '<p class="text-center text-gray-500 col-span-full">No Flutters NFTs found in your wallet.</p>';
             } else {
                 const placeholders = new Array(4).fill(0);
                 placeholders.forEach((_, index) => {
