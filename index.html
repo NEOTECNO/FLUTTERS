@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CELESTIAL FLUTTERS</title>
+    <meta name="description" content="CELESTIAL FLUTTERS">
+    <meta property="og:image" content="images/og_image.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <link rel="icon" href="images/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: url('images/BG1.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #d1d5db;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-image {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .card-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .nft-card {
+            background: url('images/nft_card_bg.png') no-repeat center center;
+            background-size: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .glow-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 5px rgba(147, 197, 253, 0.5);
+        }
+
+        .glow-button:hover {
+            box-shadow: 0 0 15px rgba(147, 197, 253, 0.8);
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                box-shadow: 0 0 0 0 rgba(147, 197, 253, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(147, 197, 253, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(147, 197, 253, 0);
+            }
+        }
+
+        #open-connect-modal {
+            animation: pulse-animation 2s infinite;
+        }
+
+        /* Message Box Styling */
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #1f2937;
+            color: #d1d5db;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            z-index: 100;
+            display: none;
+        }
+
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+        }
+        
+        /* Modal Styling */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+    </style>
+</head>
+
+<body class="selection:bg-blue-300 selection:text-blue-900">
+
+    <div class="flex flex-col min-h-screen">
+        
+        <header class="p-4 md:p-6 bg-gray-950/75 border-b border-gray-700 backdrop-blur-sm fixed w-full z-10">
+            <div class="container mx-auto flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <img src="./images/FinalLogo.png" alt="logo site" class="rounded-full h-12 w-12 object-cover">
+                    <img src="./images/img-logo.png" alt="Celestial Flutters Name" class="h-10 md:h-12 object-contain">
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <a href="https://magiceden.io/collections/sei/celestial-flutters" target="_blank" class="p-2 transition-transform hover:scale-110">
+                        <img src="./images/FinalLogo.png" alt="Magic Eden" class="h-10 w-10 hover:drop-shadow-lg"/>
+                    </a>
+                    <a href="https://x.com/Flutter_san" target="_blank" class="p-2 transition-transform hover:scale-110">
+                        <img src="./images/icons-twitter-icon.png" alt="Twitter" class="h-10 w-10 hover:drop-shadow-lg"/>
+                    </a>
+                    <a href="https://discord.gg/35M8cXQmkx" target="_blank" class="p-2 transition-transform hover:scale-110">
+                        <img src="./images/icons-discord-icon.png" alt="Discord" class="h-10 w-10 hover:drop-shadow-lg"/>
+                    </a>
+                </div>
+
+                <div class="mt-4 md:mt-0">
+                    <button class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg glow-button" id="open-connect-modal">
+                        Connect Wallet
+                    </button>
+                    <span id="wallet_address" class="text-sm text-gray-400 mt-2 hidden"></span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow pt-32 pb-16">
+            <div class="container mx-auto px-4 my-6">
+                <div class="flex flex-col lg:flex-row items-center justify-center space-y-12 lg:space-y-0 lg:space-x-16">
+                    <div class="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 bg-gray-950/75 p-8 rounded-3xl shadow-xl border border-gray-700 backdrop-blur-sm w-full max-w-lg">
+                        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-500">
+                            Explore Your Digital Collection
+                        </h1>
+                        <p class="text-lg text-gray-400">
+                            Connect your wallet to view your unique Celestial Flutters NFTs. Your personal gallery awaits.
+                        </p>
+                        
+                        <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-white">
+                            <div class="flex flex-col items-center">
+                                <span class="text-3xl font-bold">150</span>
+                                <span class="text-sm text-gray-400 uppercase tracking-widest">Total Supply</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span id="total_supply" class="text-3xl font-bold">0</span>
+                                <span class="text-sm text-gray-400 uppercase tracking-widest">Minted</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span id="owned_nfts" class="text-3xl font-bold">0</span>
+                                <span class="text-sm text-gray-400 uppercase tracking-widest">Your NFTs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full max-w-lg lg:mt-0">
+                        <img src="./images/cfp.png" alt="Celestial Flutters NFT" class="w-full h-auto rounded-3xl shadow-2xl transition-transform hover:scale-105 duration-300 ease-in-out border border-gray-700">
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <div class="container mx-auto px-4 my-0">
+            <div class="bg-gray-950/75 p-8 rounded-3xl shadow-xl border border-gray-700 backdrop-blur-sm">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-10 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"> Your NFTs </h2>
+                <div id="wallet-grid" class="image-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
+                    </div>
+            </div>
+        </div>
+
+        <footer class="mt-auto py-6 text-center bg-gray-950/75 border-t border-gray-700 backdrop-blur-sm">
+            <div class="container mx-auto">
+                <div class="text-sm text-gray-400">
+                    <span>© 2025 CELESTIAL FLUTTERS. All rights reserved.</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <div id="wallet-modal" class="modal">
+        <div class="modal-content text-center">
+            <h3 class="text-2xl font-bold mb-6">Select a Wallet</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="connect-compass" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex flex-col items-center">
+                    <span class="text-4xl mb-2">🧭</span>
+                    <span class="text-sm font-medium">Compass</span>
+                </button>
+                <button id="connect-keplr" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex flex-col items-center">
+                    <span class="text-4xl mb-2">⚛️</span>
+                    <span class="text-sm font-medium">Keplr</span>
+                </button>
+            </div>
+            <button id="close-modal" class="mt-6 text-gray-400 hover:text-white">Close</button>
+        </div>
+    </div>
+
+    <div id="message_box" class="message-box">
+        <h3 id="message_title" class="text-xl font-bold mb-4"></h3>
+        <p id="message_content" class="text-sm"></p>
+        <button id="close_message" class="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-full w-full">Close</button>
+    </div>
+    <div id="message_box_overlay" class="message-box-overlay"></div>
+    
+    <script type="module" src="main.js"></script>
+</body>
+</html>
