@@ -197,10 +197,14 @@
         </footer>
     </div>
     
-    <div id="wallet-modal" class="modal">
+    <div id="wallet-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
         <div class="modal-content text-center">
             <h3 class="text-2xl font-bold mb-6">Select a Wallet</h3>
             <div class="grid grid-cols-2 gap-4">
+                <button id="connect-metamask" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex flex-col items-center">
+                    <span class="text-4xl mb-2">🦊</span>
+                    <span class="text-sm font-medium">MetaMask</span>
+                </button>
                 <button id="connect-compass" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex flex-col items-center">
                     <span class="text-4xl mb-2">🧭</span>
                     <span class="text-sm font-medium">Compass</span>

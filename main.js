@@ -1,13 +1,26 @@
+// NOTE: This script requires the Ethers.js library to be loaded in the HTML file.
+// Please add the following line to the <head> or <body> of your HTML file:
+// <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+//
+// This log will confirm if the file is being executed at all.
 console.log("main.js script is running.");
 
 try {
+    // This listener ensures the script runs only after the entire HTML document is ready.
     document.addEventListener('DOMContentLoaded', async () => {
         console.log("DOM is fully loaded and parsed.");
         
-        const SEI_RPC_ENDPOINT = 'https://evm-rpc.sei-apis.com';
-        const SEI_CONTRACT_ADDRESS = '0x03Fcb74b320A2A6B9Ef8595246681D42c0C80788';
-        const SEI_CHAIN_ID = 'pacific-1';
+        // Use a list of RPC endpoints for redundancy.
+        const SEI_RPC_ENDPOINTS = [
+            'https://evm-rpc.sei-apis.com',
+            'https://sei-evm.rpc.com',
+            'https://sei-evm.rpc.injective.network'
+        ];
         
+        const SEI_CONTRACT_ADDRESS = '0x03Fcb74b320A2A6B9Ef8595246681D42c0C80788';
+        const SEI_CHAIN_ID_HEX = '0x531'; // The hexadecimal chain ID for Sei's EVM network (1329)
+        const SEI_CHAIN_ID_COSMOS = 'pacific-1'; // The Cosmos chain ID for Compass/Keplr
+
         let walletAddress = null;
         let connectedWalletName = null;
         let ownedNFTs = [];
@@ -38,6 +51,7 @@ try {
             messageBoxOverlay.style.display = 'none';
         }
 
+        // Functions related to the modal are now obsolete but kept for reference
         function showModal() {
             if (walletModal) {
                 walletModal.classList.remove('hidden');
@@ -173,9 +187,10 @@ try {
             try {
                 showMessageBox('Fetching NFTs', 'Checking contract for tokens...');
         
+                // The function selector for the correct `tokensOfOwner` function is `0x8462151c`.
                 const callData = '0x8462151c000000000000000000000000' + address.substring(2);
                 
-                const response = await fetch(SEI_RPC_ENDPOINT, {
+                const response = await fetch(SEI_RPC_ENDPOINTS[0], {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -192,6 +207,9 @@ try {
                 const hexData = result.result;
                 const tokenIds = [];
 
+                // The returned hex string is a packed array.
+                // The first 64 characters (32 bytes) are the offset to the array data.
+                // The next 64 characters (32 bytes) are the length of the array.
                 const arrayLength = parseInt(hexData.substring(66, 130), 16);
                 
                 // Parse the array of token IDs
@@ -206,10 +224,11 @@ try {
 
                 const nftDataPromises = tokenIds.map(async id => {
                     try {
+                        // Function selector for tokenURI(uint256) is 0xc87b56dd
                         const tokenIdHex = '0x' + id.toString(16).padStart(64, '0');
                         const tokenUriCallData = '0xc87b56dd' + tokenIdHex.substring(2);
 
-                        const tokenUriResponse = await fetch(SEI_RPC_ENDPOINT, {
+                        const tokenUriResponse = await fetch(SEI_RPC_ENDPOINTS[0], {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -227,32 +246,34 @@ try {
 
                         const uriHex = tokenUriResult.result.substring(130);
                         let uri = '';
-                        
+                        // Convert hex string to URI
                         for (let i = 0; i < uriHex.length; i += 2) {
                             uri += String.fromCharCode(parseInt(uriHex.substring(i, i + 2), 16));
                         }
                         
+                        // Replace ipfs:// with the public gateway.
                         const metadataUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
                         console.log('Fetching metadata from:', metadataUrl);
 
                         const res = await fetch(metadataUrl);
-                        
+                        // Check if the network request was successful before parsing.
                         if (!res.ok) {
                             throw new Error(`Failed to fetch metadata for token ${id}. Status: ${res.status} ${res.statusText}`);
                         }
                         const metadata = await res.json();
-                        
+                        // Replace the ipfs:// prefix in the image URL with the public gateway.
                         const imageUrl = metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/');
                         return { id, imageUrl, metadata };
                     } catch (error) {
                         console.error(`Error processing metadata for token ${id}:`, error);
-                        
+                        // Return a placeholder object so the promise chain doesn't break.
                         return { id, imageUrl: 'https://placehold.co/500x500/000000/FFFFFF?text=Error', metadata: null };
                     }
                 });
 
                 ownedNFTs = await Promise.all(nftDataPromises);
                 
+                // Filter out any NFTs that resulted in a placeholder image
                 ownedNFTs = ownedNFTs.filter(nft => nft.imageUrl !== 'https://placehold.co/500x500/000000/FFFFFF?text=Error');
 
                 console.log("Successfully fetched all NFTs:", ownedNFTs);
@@ -267,9 +288,10 @@ try {
 
         async function fetchTotalSupply() {
             try {
+                // The function selector for totalSupply() is 0x18160ddd.
                 const totalSupplyCallData = '0x18160ddd';
 
-                const response = await fetch(SEI_RPC_ENDPOINT, {
+                const response = await fetch(SEI_RPC_ENDPOINTS[0], {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -298,10 +320,73 @@ try {
                 }
             }
         }
+
+        // Added this function to check and switch the network for MetaMask
+        async function checkAndSwitchNetwork() {
+            if (typeof window.ethereum === 'undefined') return false; // MetaMask not installed
+            
+            showMessageBox('Comprobando la red', 'Verificando que su billetera esté en la red Sei EVM...');
+            const SEI_NETWORK_PARAMS = {
+                chainId: SEI_CHAIN_ID_HEX,
+                chainName: 'Sei EVM',
+                rpcUrls: SEI_RPC_ENDPOINTS, // Use the list of endpoints
+                nativeCurrency: {
+                    name: 'SEI',
+                    symbol: 'SEI',
+                    decimals: 18,
+                },
+                blockExplorerUrls: ['https://sei.evm.rpc-explorer.com/'],
+            };
+
+            try {
+                // First, try to switch the network. This is the fastest path if the network is already added.
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: SEI_CHAIN_ID_HEX }],
+                });
+                console.log("Cambio de red exitoso.");
+                hideMessageBox();
+                return true;
+            } catch (switchError) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                if (switchError.code === 4902) {
+                    try {
+                        showMessageBox('Añadiendo red', 'La red Sei no está configurada en su billetera. Intentando añadirla ahora...');
+                        
+                        // Add the network.
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [SEI_NETWORK_PARAMS],
+                        });
+
+                        // After adding, wait a moment before trying to switch again.
+                        // This helps resolve timing issues where MetaMask needs time to process the new network.
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        // Retry the switch to the newly added network.
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: SEI_CHAIN_ID_HEX }],
+                        });
+                        showMessageBox('Red añadida y cambiada', 'La red Sei se ha añadido y se ha cambiado con éxito.');
+                        return true;
+
+                    } catch (addError) {
+                        console.error("Error al añadir la red:", addError);
+                        showMessageBox('Conexión fallida', `No se pudo añadir la red Sei. Error: ${addError.message}. Por favor, añádala manualmente.`);
+                        return false;
+                    }
+                }
+                // If the user rejected the network switch or another error occurred.
+                console.error("El usuario rechazó el cambio de red o ocurrió otro error:", switchError);
+                showMessageBox('Cambio rechazado', 'Debe cambiar a la red Sei para continuar.');
+                return false;
+            }
+        }
         
         async function connectWallet(walletName) {
             hideModal();
-            showMessageBox('Connecting...', `Please approve the connection in your ${walletName} wallet. If you do not see a pop-up, please check your browser's extension settings.`);
+            showMessageBox('Conectando...', `Por favor, apruebe la conexión en su billetera ${walletName}. Si no ve una ventana emergente, verifique la configuración de la extensión de su navegador.`);
             try {
                 let accounts = [];
                 let cosmosAccount = null;
@@ -310,8 +395,8 @@ try {
                     if (typeof window.compass === 'undefined') {
                         throw new Error('Compass wallet is not installed. Please install it to continue.');
                     }
-                    await window.compass.enable(SEI_CHAIN_ID);
-                    const compassOfflineSigner = window.compass.getOfflineSigner(SEI_CHAIN_ID);
+                    await window.compass.enable(SEI_CHAIN_ID_COSMOS);
+                    const compassOfflineSigner = window.compass.getOfflineSigner(SEI_CHAIN_ID_COSMOS);
                     accounts = await compassOfflineSigner.getAccounts();
                     if (accounts && accounts.length > 0) {
                         cosmosAccount = accounts[0];
@@ -320,11 +405,30 @@ try {
                     if (typeof window.keplr === 'undefined') {
                         throw new Error('Keplr wallet is not installed. Please install it to continue.');
                     }
-                    await window.keplr.enable(SEI_CHAIN_ID);
-                    const keplrOfflineSigner = window.getOfflineSigner(SEI_CHAIN_ID);
+                    await window.keplr.enable(SEI_CHAIN_ID_COSMOS);
+                    const keplrOfflineSigner = window.getOfflineSigner(SEI_CHAIN_ID_COSMOS);
                     accounts = await keplrOfflineSigner.getAccounts();
                     if (accounts && accounts.length > 0) {
                         cosmosAccount = accounts[0];
+                    }
+                } else if (walletName === 'MetaMask') {
+                    // MetaMask uses the standard Ethereum provider API
+                    if (typeof window.ethereum === 'undefined') {
+                        throw new Error('MetaMask is not installed. Please install it to continue.');
+                    }
+                    // First, check and switch the network
+                    const isCorrectNetwork = await checkAndSwitchNetwork();
+                    if (!isCorrectNetwork) {
+                        return; // Exit if the network is wrong and the user rejected the switch
+                    }
+
+                    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if (accounts && accounts.length > 0) {
+                        walletAddress = accounts[0];
+                        connectedWalletName = walletName;
+                        console.log(`Successfully connected MetaMask. EVM address: ${walletAddress}`);
+                        await fetchOwnedNFTs(walletAddress);
+                        return; // Exit the function since we have a direct EVM address
                     }
                 }
 
@@ -342,7 +446,7 @@ try {
                 }
             } catch (error) {
                 console.error("Wallet connection error:", error);
-                showMessageBox('Connection Failed', `Could not connect to ${walletName} wallet. Error: ${error.message}. Please ensure the extension is enabled and you have approved the connection.`);
+                showMessageBox('Conexión fallida', `No se pudo conectar a la billetera ${walletName}. Error: ${error.message}. Por favor, asegúrese de que la extensión está habilitada y ha aprobado la conexión.`);
             }
         }
 
@@ -356,14 +460,21 @@ try {
         if (keplrButton) {
             keplrButton.addEventListener('click', () => connectWallet('Keplr'));
         }
+        
+        // New event listener for the MetaMask button
+        const metamaskButton = document.getElementById('connect-metamask');
+        if (metamaskButton) {
+            metamaskButton.addEventListener('click', () => connectWallet('MetaMask'));
+        }
 
         // Add event listener to the main connect button
         if (connectButton) {
             connectButton.addEventListener('click', showModal);
         }
         
+        // Call fetchTotalSupply() first so the total supply is always loaded.
         await fetchTotalSupply();
-        updateUI();
+        updateUI(); // Initial UI update to show the "Connect Wallet" button and placeholders
     });
 } catch (error) {
     console.error("An error occurred in the main script:", error);
